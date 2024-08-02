@@ -1,13 +1,42 @@
+
+// Описаний в документації
 import flatpickr from 'flatpickr';
+// Додатковий імпорт стилів
 import 'flatpickr/dist/flatpickr.min.css';
 
-import iziToast from 'izitoast';
-import 'izitoast/dist/css/iziToast.min.css';
+// Описаний у документації
+import iziToast from "izitoast";
+// Додатковий імпорт стилів
+import "izitoast/dist/css/iziToast.min.css";
+
+function convertMs(ms) {
+  // Number of milliseconds per unit of time
+  const second = 1000;
+  const minute = second * 60;
+  const hour = minute * 60;
+  const day = hour * 24;
+
+  // Remaining days
+  const days = Math.floor(ms / day);
+  // Remaining hours
+  const hours = Math.floor((ms % day) / hour);
+  // Remaining minutes
+  const minutes = Math.floor(((ms % day) % hour) / minute);
+  // Remaining seconds
+  const seconds = Math.floor((((ms % day) % hour) % minute) / second);
+
+  return { days, hours, minutes, seconds };
+}
+
+const button = document.querySelector('button');
+const secondsElement = document.querySelector('span.value[data-seconds]');
+const minutesElement = document.querySelector('span.value[data-minutes]');
+const hoursElement = document.querySelector('span.value[data-hours]');
+const daysElement = document.querySelector('span.value[data-days]');
 
 let userSelectedDate;
-let countdownInterval;
 
-const button = document.querySelector('[data-start]');
+button.disabled = true
 
 const options = {
   enableTime: true,
@@ -19,79 +48,47 @@ const options = {
     if (userSelectedDate.getTime() < Date.now()) {
       button.disabled = true;
       iziToast.error({
-        position: 'topRight',
-        messageColor: 'white',
-        backgroundColor: 'red',
-        message: 'Please choose a date in the future',
-      });
+        position: "topRight",
+        messageColor: "white",
+        backgroundColor: "red",
+        message: "Please choose a date in the future"
+      })
     } else {
       button.disabled = false;
     }
   },
 };
 
-flatpickr('#datetime-picker', options);
+const dateTimeInput = document.querySelector('#datetime-picker');
 
-function disableButton() {
-  const button = document.querySelector('[data-start]');
+flatpickr(dateTimeInput, options);
+
+function updateTimerDisplay({ days, hours, minutes, seconds }) {
+  secondsElement.textContent = String(seconds).padStart(2, '0');
+  minutesElement.textContent = String(minutes).padStart(2, '0');
+  hoursElement.textContent = String(hours).padStart(2, '0');
+  daysElement.textContent = String(days).padStart(2, '0');
+}
+
+function handleBtnClick(event) {
+  dateTimeInput.disabled = true
   button.disabled = true;
-}
 
-function enableButton() {
-  const button = document.querySelector('[data-start]');
-  button.disabled = false;
-}
+  const intervalId = setInterval(() => {
 
-function addLeadingZero(value) {
-  return value.toString().padStart(2, '0');
-}
+    let diff = userSelectedDate - Date.now();
 
-function convertMs(ms) {
-  const second = 1000;
-  const minute = second * 60;
-  const hour = minute * 60;
-  const day = hour * 24;
-
-  const days = Math.floor(ms / day);
-  const hours = Math.floor((ms % day) / hour);
-  const minutes = Math.floor(((ms % day) % hour) / minute);
-  const seconds = Math.floor((((ms % day) % hour) % minute) / second);
-
-  return { days, hours, minutes, seconds };
-}
-
-function updateTimer(days, hours, minutes, seconds) {
-  document.querySelector('[data-days]').textContent = days;
-  document.querySelector('[data-hours]').textContent = addLeadingZero(hours);
-  document.querySelector('[data-minutes]').textContent =
-    addLeadingZero(minutes);
-  document.querySelector('[data-seconds]').textContent =
-    addLeadingZero(seconds);
-}
-
-function startTimer() {
-  disableButton();
-  document.querySelector('#datetime-picker').disabled = true;
-
-  countdownInterval = setInterval(() => {
-    const now = new Date().getTime();
-    const distance = userSelectedDate.getTime() - now;
-
-    if (distance <= 0) {
-      clearInterval(countdownInterval);
-      document.querySelector('#datetime-picker').disabled = false;
-      iziToast.show({
-        title: 'Time is up!',
-        message: 'The countdown has reached zero.',
-        color: 'green',
-        position: 'topCenter',
-      });
+    if (diff <= 0) {
+      dateTimeInput.disabled = false
+      clearInterval(intervalId);
+      updateTimerDisplay({ days: 0, hours: 0, minutes: 0, seconds: 0 })
       return;
     }
 
-    const { days, hours, minutes, seconds } = convertMs(distance);
-    updateTimer(days, hours, minutes, seconds);
+    const timeLeft = convertMs(diff)
+
+    updateTimerDisplay(timeLeft)
   }, 1000);
 }
 
-document.querySelector('[data-start]').addEventListener('click', startTimer);
+button.addEventListener('click', handleBtnClick);
